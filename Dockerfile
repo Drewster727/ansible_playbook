@@ -1,41 +1,27 @@
-FROM gliderlabs/alpine:3.4
+FROM alpine:3.8
 
-RUN \
-  apk-install \
-    curl \
-    git \
-    openssh-client \
-    python \
-    py-boto \
-    py-dateutil \
-    py-httplib2 \
-    py-jinja2 \
-    py-paramiko \
-    py-pip \
-    py-setuptools \
-    py-yaml \
-    tar && \
-  pip install --upgrade pip python-keyczar && \
-  rm -rf /var/cache/apk/*
+ENV ANSIBLE_VERSION 2.8.7
+ENV ANSIBLE_LINT 3.5.1
+ENV DOCKER_PY_VERSION 1.10.6
 
-RUN mkdir /etc/ansible/ /ansible
-RUN echo "[local]" >> /etc/ansible/hosts && \
-    echo "localhost" >> /etc/ansible/hosts
+RUN apk add --update python py-pip openssl ca-certificates bash git sudo zip \
+    && apk --update add --virtual build-dependencies python-dev libffi-dev openssl-dev build-base \
+    && pip install --upgrade pip cffi \
+    && echo "Installing Ansible..." \
+    && pip install ansible==$ANSIBLE_VERSION ansible-lint==$ANSIBLE_LINT docker-py==$DOCKER_PY_VERSION \
+    && pip install --upgrade pycrypto pywinrm  \
+    && apk --update add sshpass openssh-client rsync \
+    && echo "Removing package list..." \
+    && apk del build-dependencies \
+    && rm -rf /var/cache/apk/*
 
-RUN \
-  curl -fsSL https://github.com/ansible/ansible/archive/v2.8.7.tar.gz -o ansible.tar.gz && \
-  tar -xzf ansible.tar.gz -C ansible --strip-components 1 && \
-  rm -fr ansible.tar.gz /ansible/docs /ansible/examples /ansible/packaging
-
-RUN mkdir -p /ansible/playbooks
-WORKDIR /ansible/playbooks
+RUN echo "Adding hosts for convenience..." \
+    && mkdir -p /etc/ansible \
+    && echo 'localhost' > /etc/ansible/hosts
 
 ENV ANSIBLE_GATHERING smart
 ENV ANSIBLE_HOST_KEY_CHECKING false
 ENV ANSIBLE_RETRY_FILES_ENABLED false
-ENV ANSIBLE_ROLES_PATH /ansible/playbooks/roles
 ENV ANSIBLE_SSH_PIPELINING True
-ENV PATH /ansible/bin:$PATH
-ENV PYTHONPATH /ansible/lib
 
 ENTRYPOINT ["ansible-playbook"]
