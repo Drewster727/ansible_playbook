@@ -1,23 +1,33 @@
-FROM alpine:3.8
+ARG ALPINE_VERSION=latest
+FROM alpine:${ALPINE_VERSION}
 
 ENV ANSIBLE_VERSION 2.9.11
-ENV ANSIBLE_LINT 3.5.1
-ENV DOCKER_PY_VERSION 1.10.6
+ENV ANSIBLE_LINT_VERSION 4.2.0
+ENV DOCKER_PY_VERSION 4.2.2
 ENV PACKER_VERSION 1.6.1
 
-RUN apk add --update python py-pip openssl ca-certificates bash git sudo zip tar \
-    && apk --update add --virtual build-dependencies python-dev libffi-dev openssl-dev build-base \
-    && pip install --upgrade pip cffi \
-    && echo "Installing Ansible..." \
-    && pip install ansible==$ANSIBLE_VERSION ansible-lint==$ANSIBLE_LINT docker-py==$DOCKER_PY_VERSION \
-    && pip install --upgrade pycrypto pywinrm  \
-    && apk --update add sshpass openssh-client rsync \
-    && echo "Removing package list..." \
-    && apk del build-dependencies \
-    && rm -rf /var/cache/apk/* \
-    && mkdir -p /opt/packer \
-    && wget -nc -q https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_linux_amd64.zip -P /opt/packer \
-    && unzip -q /opt/packer/packer_${PACKER_VERSION}_linux_amd64.zip -d /opt/packer
+RUN set -euxo pipefail ;\
+    sed -i 's/http\:\/\/dl-cdn.alpinelinux.org/https\:\/\/alpine.global.ssl.fastly.net/g' /etc/apk/repositories ;\
+    apk add --no-cache --update --virtual .build-deps g++ python3-dev build-base libffi-dev openssl-dev ;\
+    apk add --no-cache --update python3 ca-certificates openssh-client sshpass dumb-init su-exec ;\
+    if [ ! -e /usr/bin/python ]; then ln -sf python3 /usr/bin/python ; fi ;\
+    echo "**** install pip ****" ;\
+    python3 -m ensurepip ;\
+    rm -r /usr/lib/python*/ensurepip ;\
+    if [ ! -e /usr/bin/pip ]; then ln -s pip3 /usr/bin/pip ; fi ;\
+    pip3 install --no-cache --upgrade pip ;\
+    pip3 install --no-cache --upgrade setuptools wheel ansible==${ANSIBLE_VERSION} ansible-lint==${ANSIBLE_LINT_VERSION} docker==${DOCKER_PY_VERSION} ;\
+    apk del --no-cache --purge .build-deps ;\
+    rm -rf /var/cache/apk/* ;\
+    rm -rf /root/.cache ;\
+    mkdir -p /etc/ansible/ ;\
+    /bin/echo -e "[local]\nlocalhost ansible_connection=local" > /etc/ansible/hosts ;\
+    ssh-keygen -q -t ed25519 -N '' -f /root/.ssh/id_ed25519 ;\
+    mkdir -p ~/.ssh && echo "Host *" > ~/.ssh/config && echo " StrictHostKeyChecking no" >> ~/.ssh/config ;\
+    adduser -s /bin/ash -u 1000 -D -h /ansible ansible ;\
+    mkdir -p /opt/packer ;\
+    wget -nc -q https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_linux_amd64.zip -P /opt/packer ;\
+    unzip -q /opt/packer/packer_${PACKER_VERSION}_linux_amd64.zip -d /opt/packer 
 
 RUN echo "Adding hosts for convenience..." \
     && mkdir -p /etc/ansible \
