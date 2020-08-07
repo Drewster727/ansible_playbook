@@ -1,9 +1,9 @@
 FROM alpine:3.8
 
-ENV ANSIBLE_VERSION 2.8.7
+ENV ANSIBLE_VERSION 2.9.11
 ENV ANSIBLE_LINT 3.5.1
 ENV DOCKER_PY_VERSION 1.10.6
-ENV PACKER_VERSION 1.5.1
+ENV PACKER_VERSION 1.6.1
 
 RUN apk add --update python py-pip openssl ca-certificates bash git sudo zip tar \
     && apk --update add --virtual build-dependencies python-dev libffi-dev openssl-dev build-base \
