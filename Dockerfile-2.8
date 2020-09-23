@@ -16,7 +16,7 @@ RUN set -euxo pipefail ;\
     rm -r /usr/lib/python*/ensurepip ;\
     if [ ! -e /usr/bin/pip ]; then ln -s pip3 /usr/bin/pip ; fi ;\
     pip3 install --no-cache --upgrade pip ;\
-    pip3 install --no-cache --upgrade setuptools wheel ansible==${ANSIBLE_VERSION} ansible-lint==${ANSIBLE_LINT_VERSION} docker==${DOCKER_PY_VERSION} pycrypto pywinrm ;\
+    pip3 install --no-cache --upgrade setuptools wheel ansible==${ANSIBLE_VERSION} ansible-lint==${ANSIBLE_LINT_VERSION} docker==${DOCKER_PY_VERSION} pycrypto pywinrm boto3 botocore ;\
     apk del --no-cache --purge .build-deps ;\
     rm -rf /var/cache/apk/* ;\
     rm -rf /root/.cache ;\
